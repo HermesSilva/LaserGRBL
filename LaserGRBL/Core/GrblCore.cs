@@ -265,6 +265,7 @@ namespace LaserGRBL
 		public event dlgOnMachineStatus MachineStatusChanged;
 		public event GrblFile.OnFileLoadedDlg OnFileLoading;
 		public event GrblFile.OnFileLoadedDlg OnFileLoaded;
+		public event GrblFile.OnFileLoadedDlg OnFileChanged;
 		public event dlgOnOverrideChange OnOverrideChange;
 		public event dlgOnLoopCountChange OnLoopCountChange;
 		public event dlgJogStateChange JogStateChange;
@@ -372,6 +373,7 @@ namespace LaserGRBL
 
 			file.OnFileLoading += RiseOnFileLoading;
 			file.OnFileLoaded += RiseOnFileLoaded;
+			file.OnFileChanged += RiseOnFileChanged;
 
 			mQueue = new System.Collections.Generic.Queue<GrblCommand>();
 			mPending = new System.Collections.Generic.Queue<GrblCommand>();
@@ -636,6 +638,13 @@ namespace LaserGRBL
 
 			if (OnFileLoaded != null)
 				OnFileLoaded?.Invoke(elapsed, filename);
+		}
+
+		void RiseOnFileChanged(long elapsed, string filename)
+		{
+			mTP.Reset(true);
+
+			OnFileChanged?.Invoke(elapsed, filename);
 		}
 
 		public GrblFile LoadedFile

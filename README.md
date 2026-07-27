@@ -1,9 +1,42 @@
-# LaserGRBL [![Donation](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate?business=4WQX8HUBXRVUU&no_recurring=0&item_name=LaserGRBL&currency_code=EUR)
-Official website [http://lasergrbl.com](http://lasergrbl.com)
+# LaserGRBL (fork)
+
+> **This is a personal fork of [arkypita/LaserGRBL](https://github.com/arkypita/LaserGRBL).**
+> It is not the official project and is not endorsed by the upstream author.
+> For the official releases, website and support, please refer to [lasergrbl.com](http://lasergrbl.com)
+> and to the [upstream repository](https://github.com/arkypita/LaserGRBL).
 
 LaserGRBL is a Windows GUI for [GRBL](https://github.com/gnea/grbl/wiki). Unlike other GUI LaserGRBL it is specifically developed for use with laser cutter and engraver. In order to use all of LaserGRBL feature, your engraver must supports laser power modulation through gcode "S" command. LaserGRBL is compatible with [Grbl v0.9](https://github.com/grbl/grbl/) and [Grbl v1.1](https://github.com/gnea/grbl/)
 
-All downloads available at https://github.com/arkypita/LaserGRBL/releases
+Official downloads available at https://github.com/arkypita/LaserGRBL/releases
+
+## Changes in this fork
+
+### SVG job controls
+
+When a vector SVG file is imported, three controls are shown in the file panel, right below the
+progress bar. They apply to the **whole job** and are disabled while the job is running,
+because power, speed and size are fixed for the entire program:
+
+- **Power** — slider that rescales the `S` value of the job, keeping the original proportions
+  (`S0`, i.e. laser off, always stays zero). Range and 100% reference come from `$30`.
+- **Scale** — numeric editor, from -99% to +900% (0 = original size), rescaling `X`, `Y`, `I`, `J`
+  and `R`. Accepts typing (ENTER applies, ESC discards) as well as the spin buttons.
+- **Speed** — slider from +1 to -300, linearly mapped to a feed rate factor from 1.00x (at +1)
+  down to 0.333x (at -300), rewriting every `F` of the job.
+
+Every change rewrites the generated gcode itself, so it is reflected both in the preview and in
+the job actually sent to the machine (estimated time included). Values are always recomputed from
+the gcode produced by the SVG import, so repeated adjustments do not accumulate rounding errors.
+
+### Supporting changes
+
+- New `OnFileChanged` event: refreshes the drawing when the loaded program changes, without
+  reframing the view (zoom and pan are kept).
+- `GrblFile.CommandsLock`: the command list is now shared safely between the drawing threads and
+  the code that rewrites the program.
+- `NumericInput.NumericUpDown`: typed values are committed on ENTER, discarded on ESC, and the
+  current value is selected when the control gets the focus.
+- Project retargeted to .NET Framework 4.8.
 
 ### Support and Donation
 

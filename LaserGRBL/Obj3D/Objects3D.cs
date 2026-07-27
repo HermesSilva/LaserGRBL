@@ -335,77 +335,80 @@ namespace LaserGRBL.Obj3D
                 AddVertex((double)Core.LoadedFile.Range.DrawingRange.X.Min, borderLimit, zPos, BoundingBoxColor);
             }
             NewDisplayList();
-            int commandsCount = Core.LoadedFile.Commands.Count;
-            for (int i = 0; i < commandsCount; i++)
+            lock (Core.LoadedFile.CommandsLock) //the list can be rewritten while drawing (svg power/size change)
             {
-                LoadingPercentage = (i + 1.0) / commandsCount * 100;
-                GrblCommand cmd = Core.LoadedFile.Commands[i];
-                try
+                int commandsCount = Core.LoadedFile.Commands.Count;
+                for (int i = 0; i < commandsCount; i++)
                 {
-                    cmd.BuildHelper();
-                    spb.AnalyzeCommand(cmd, false);
-
-                    if (spb.TrueMovement())
+                    LoadingPercentage = (i + 1.0) / commandsCount * 100;
+                    GrblCommand cmd = Core.LoadedFile.Commands[i];
+                    try
                     {
-                        if (spb.G0G1 && cmd.IsLinearMovement)
+                        cmd.BuildHelper();
+                        spb.AnalyzeCommand(cmd, false);
+
+                        if (spb.TrueMovement())
                         {
-                            GLColor color = Color;
-                            float intensity = 1;
-                            if (spb.LaserBurning && !mJustLaserOffMovements)
+                            if (spb.G0G1 && cmd.IsLinearMovement)
                             {
-                                intensity = spb.GetCurrentAlpha(Core.LoadedFile.Range.SpindleRange) / 255f;
-                            }
-                            else
-                            {
-                                intensity = mJustLaserOffMovements ? 1 : 0;
-                            }
-                            if (intensity > 0)
-                            {
-                                color = Blend(color, intensity);
-                                AddVertex((float)spb.X.Previous, (float)spb.Y.Previous, zPos, color, cmd, intensity);
-                                AddVertex((float)spb.X.Number, (float)spb.Y.Number, zPos, color, cmd, intensity);
-                            }
-                        }
-                        else if (spb.G2G3 && cmd.IsArcMovement)
-                        {
-                            GrblCommand.G2G3Helper ah = spb.GetArcHelper(cmd);
-                            if (ah.RectW > 0 && ah.RectH > 0)
-                            {
-                                double? lastX = null;
-                                double? lastY = null;
                                 GLColor color = Color;
-                                float intensity = spb.GetCurrentAlpha(Core.LoadedFile.Range.SpindleRange) / 255f;
-                                color = Blend(color, intensity);
-                                double startAngle = ah.StartAngle;
-                                double endAngle = ah.StartAngle + ah.AngularWidth;
-                                int sign = Math.Sign(ah.AngularWidth);
-                                double angleStep = Math.Abs(ah.AngularWidth / Math.PI / 36);
-                                for (double angle = startAngle; sign * (angle - startAngle) <= sign * ah.AngularWidth; angle += sign * angleStep)
+                                float intensity = 1;
+                                if (spb.LaserBurning && !mJustLaserOffMovements)
                                 {
-                                    double x = ah.CenterX + ah.RectW / 2 * Math.Cos(angle);
-                                    double y = ah.CenterY + ah.RectH / 2 * Math.Sin(angle);
-                                    if (lastX != null && lastY != null)
-                                    {
-                                        AddVertex((double)lastX, (double)lastY, zPos, color, cmd, intensity);
-                                    }
-                                    else
-                                    {
-                                        AddVertex(x, y, zPos, color, cmd, intensity);
-                                    }
-                                    AddVertex(x, y, zPos, color, cmd, intensity);
-                                    lastX = x;
-                                    lastY = y;
+                                    intensity = spb.GetCurrentAlpha(Core.LoadedFile.Range.SpindleRange) / 255f;
+                                }
+                                else
+                                {
+                                    intensity = mJustLaserOffMovements ? 1 : 0;
+                                }
+                                if (intensity > 0)
+                                {
+                                    color = Blend(color, intensity);
+                                    AddVertex((float)spb.X.Previous, (float)spb.Y.Previous, zPos, color, cmd, intensity);
+                                    AddVertex((float)spb.X.Number, (float)spb.Y.Number, zPos, color, cmd, intensity);
                                 }
                             }
+                            else if (spb.G2G3 && cmd.IsArcMovement)
+                            {
+                                GrblCommand.G2G3Helper ah = spb.GetArcHelper(cmd);
+                                if (ah.RectW > 0 && ah.RectH > 0)
+                                {
+                                    double? lastX = null;
+                                    double? lastY = null;
+                                    GLColor color = Color;
+                                    float intensity = spb.GetCurrentAlpha(Core.LoadedFile.Range.SpindleRange) / 255f;
+                                    color = Blend(color, intensity);
+                                    double startAngle = ah.StartAngle;
+                                    double endAngle = ah.StartAngle + ah.AngularWidth;
+                                    int sign = Math.Sign(ah.AngularWidth);
+                                    double angleStep = Math.Abs(ah.AngularWidth / Math.PI / 36);
+                                    for (double angle = startAngle; sign * (angle - startAngle) <= sign * ah.AngularWidth; angle += sign * angleStep)
+                                    {
+                                        double x = ah.CenterX + ah.RectW / 2 * Math.Cos(angle);
+                                        double y = ah.CenterY + ah.RectH / 2 * Math.Sin(angle);
+                                        if (lastX != null && lastY != null)
+                                        {
+                                            AddVertex((double)lastX, (double)lastY, zPos, color, cmd, intensity);
+                                        }
+                                        else
+                                        {
+                                            AddVertex(x, y, zPos, color, cmd, intensity);
+                                        }
+                                        AddVertex(x, y, zPos, color, cmd, intensity);
+                                        lastX = x;
+                                        lastY = y;
+                                    }
+                                }
+                            }
+                            CheckListSize();
                         }
-                        CheckListSize();
                     }
+                    catch (Exception ex)
+                    {
+                        throw ex;
+                    }
+                    finally { cmd.DeleteHelper(); }
                 }
-                catch (Exception ex)
-                {
-                    throw ex;
-                }
-                finally { cmd.DeleteHelper(); }
             }
             Core.LoadedFile.InUse = false;
         }

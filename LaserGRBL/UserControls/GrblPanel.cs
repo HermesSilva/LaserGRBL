@@ -135,6 +135,7 @@ namespace LaserGRBL.UserControls
 			Core = core;
 			Core.OnFileLoading += OnFileLoading;
 			Core.OnFileLoaded += OnFileLoaded;
+			Core.OnFileChanged += OnFileLoaded;
 		}
 
 		void OnFileLoading(long elapsed, string filename)

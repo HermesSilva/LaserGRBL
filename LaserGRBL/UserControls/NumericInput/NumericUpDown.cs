@@ -14,10 +14,47 @@ namespace LaserGRBL.UserControls.NumericInput
 
         public event EventHandler ValueChanged;
 
+        //gives access to the protected text validation of the standard control, so a typed value
+        //can be committed on ENTER instead of waiting for the focus to be lost
+        internal class InnerNumericUpDown : System.Windows.Forms.NumericUpDown
+        {
+            public void CommitEditText()
+            { ValidateEditText(); }
+        }
+
         public NumericUpDown()
         {
             InitializeComponent();
             mNumericUpDown.ValueChanged += MNumericUpDown_ValueChanged;
+            mNumericUpDown.KeyDown += MNumericUpDown_KeyDown;
+            mNumericUpDown.Enter += MNumericUpDown_Enter;
+            Click += (s, e) => mNumericUpDown.Focus();
+        }
+
+        private void MNumericUpDown_Enter(object sender, EventArgs e)
+        {
+            mNumericUpDown.Select(0, mNumericUpDown.Text.Length); //typing replaces the current value
+        }
+
+        private void MNumericUpDown_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                CommitEditText();
+                e.Handled = e.SuppressKeyPress = true; //no windows beep
+            }
+            else if (e.KeyCode == Keys.Escape)
+            {
+                mNumericUpDown.Text = mNumericUpDown.Value.ToString(); //discard what has been typed
+                e.Handled = e.SuppressKeyPress = true;
+            }
+        }
+
+        /// <summary>Apply the typed text without waiting for the focus to be lost (out of range values are clamped)</summary>
+        public void CommitEditText()
+        {
+            mNumericUpDown.CommitEditText();
+            mNumericUpDown.Select(0, mNumericUpDown.Text.Length);
         }
 
         public int DecimalPlaces

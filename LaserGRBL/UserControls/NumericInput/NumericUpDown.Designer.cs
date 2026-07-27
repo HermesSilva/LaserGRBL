@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.mNumericUpDown = new System.Windows.Forms.NumericUpDown();
+            this.mNumericUpDown = new InnerNumericUpDown();
             this.SuspendLayout();
             // 
             // mTextBox
@@ -54,6 +54,6 @@
         }
 
         #endregion
-        private System.Windows.Forms.NumericUpDown mNumericUpDown;
+        private InnerNumericUpDown mNumericUpDown;
     }
 }

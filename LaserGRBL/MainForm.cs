@@ -111,6 +111,7 @@ namespace LaserGRBL
 
 			Core.MachineStatusChanged += OnMachineStatus;
 			Core.OnFileLoaded += OnFileLoaded;
+			Core.OnFileChanged += OnFileLoaded;
 			Core.OnOverrideChange += RefreshOverride;
 			Core.IssueDetected += OnIssueDetected;
 

@@ -964,6 +964,7 @@ namespace LaserGRBL.UserControls
 			Core = core;
             Core.OnFileLoading += OnFileLoading;
 			Core.OnFileLoaded += OnFileLoaded;
+			Core.OnFileChanged += OnFileChanged;
 			Core.ShowExecutedCommands.OnChange += ShowExecutedCommands_OnChange;
 			Core.PreviewLineSize.OnChange += PrerviewLineSize_OnChange;
 			Core.ShowLaserOffMovements.OnChange += ShowLaserOffMovements_OnChange;
@@ -1036,6 +1037,15 @@ namespace LaserGRBL.UserControls
 			DisposeGrbl3D();
 			mReload = true;
 			AutoSizeDrawing();
+		}
+
+		//same file with changed content (i.e. svg job power/size): rebuild the drawing but keep current zoom and pan
+		private void OnFileChanged(long elapsed, string filename)
+		{
+			DisposeGrbl3D();
+			mReload = true;
+			RR.Set();       //wake up the drawing thread: Invalidate() alone would just repaint the old bitmap
+			Invalidate();
 		}
 		
 		public void AutoSizeDrawing()

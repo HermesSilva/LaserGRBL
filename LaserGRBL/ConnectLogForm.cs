@@ -23,6 +23,18 @@ namespace LaserGRBL
 		GrblCore Core;
 		private string mLoadedFileName;
 
+		//svg job power slider and size editor (created by code, added as new rows of tableLayoutPanel5, under the progress bar)
+		private Label LblSvgPower;
+		private TrackBar TBSvgPower;
+		private Label LblSvgPowerValue;
+		private Label LblSvgScale;
+		private UserControls.NumericInput.NumericUpDown UDSvgScale;
+		private Label LblSvgScaleValue;
+		private Label LblSvgSpeed;
+		private TrackBar TBSvgSpeed;
+		private Label LblSvgSpeedValue;
+		private bool mSuspendSvgPowerEvent;
+
 		public ConnectLogForm()
 		{
 			currentWrapper = Settings.GetObject("ComWrapper Protocol", ComWrapper.WrapperType.UsbSerial);
@@ -33,6 +45,7 @@ namespace LaserGRBL
 		{
 			Core = core;
 			Core.OnFileLoaded += OnFileLoaded;
+			Core.OnFileChanged += OnFileLoaded;
 			Core.OnLoopCountChange += OnLoopCountChanged;
 			CmdLog.SetCom(core);
 
@@ -46,10 +59,216 @@ namespace LaserGRBL
 
             InitSpeedCB();
 			InitPortCB();
+			InitSvgPowerRow();
 
 			RestoreConf();
 
 			TimerUpdate();
+		}
+
+		private void InitSvgPowerRow()
+		{
+			LblSvgPower = new Label();
+			LblSvgPower.Text = "Power";
+			LblSvgPower.AutoSize = true;
+			LblSvgPower.Anchor = AnchorStyles.Left;
+			LblSvgPower.Margin = new Padding(3, 6, 3, 0);
+
+			TBSvgPower = new TrackBar();
+			TBSvgPower.AutoSize = false;
+			TBSvgPower.Height = 26;
+			TBSvgPower.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+			TBSvgPower.TickStyle = TickStyle.None;
+			TBSvgPower.Minimum = 0;
+			TBSvgPower.Maximum = 1000;
+			TBSvgPower.SmallChange = 1;
+			TBSvgPower.LargeChange = 50;
+			TBSvgPower.Margin = new Padding(3, 0, 3, 0);
+			TBSvgPower.ValueChanged += TBSvgPower_ValueChanged;
+			TBSvgPower.MouseUp += TBSvgPower_ApplyRequest;
+			TBSvgPower.KeyUp += TBSvgPower_ApplyRequest;
+
+			LblSvgPowerValue = new Label();
+			LblSvgPowerValue.AutoSize = true;
+			LblSvgPowerValue.Anchor = AnchorStyles.Left;
+			LblSvgPowerValue.Margin = new Padding(3, 6, 3, 0);
+
+			LblSvgScale = new Label();
+			LblSvgScale.Text = "Scale";
+			LblSvgScale.AutoSize = true;
+			LblSvgScale.Anchor = AnchorStyles.Left;
+			LblSvgScale.Margin = new Padding(3, 6, 3, 3);
+
+			UDSvgScale = new UserControls.NumericInput.NumericUpDown();
+			UDSvgScale.Anchor = AnchorStyles.Left;
+			UDSvgScale.Width = 70;
+			UDSvgScale.Minimum = GrblFile.SVG_SCALE_MIN; //negative values shrink the drawing, positive values enlarge it
+			UDSvgScale.Maximum = GrblFile.SVG_SCALE_MAX;
+			UDSvgScale.Increment = 1;
+			UDSvgScale.Value = 0;
+			UDSvgScale.Margin = new Padding(3, 3, 3, 3);
+			UDSvgScale.ValueChanged += UDSvgScale_ValueChanged;
+
+			LblSvgScaleValue = new Label();
+			LblSvgScaleValue.AutoSize = true;
+			LblSvgScaleValue.Anchor = AnchorStyles.Left;
+			LblSvgScaleValue.Margin = new Padding(3, 6, 3, 3);
+
+			LblSvgSpeed = new Label();
+			LblSvgSpeed.Text = "Speed";
+			LblSvgSpeed.AutoSize = true;
+			LblSvgSpeed.Anchor = AnchorStyles.Left;
+			LblSvgSpeed.Margin = new Padding(3, 6, 3, 0);
+
+			TBSvgSpeed = new TrackBar();
+			TBSvgSpeed.AutoSize = false;
+			TBSvgSpeed.Height = 26;
+			TBSvgSpeed.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+			TBSvgSpeed.TickStyle = TickStyle.None;
+			TBSvgSpeed.Minimum = GrblFile.SVG_SPEED_MIN; //-300 = one third of the programmed feed
+			TBSvgSpeed.Maximum = GrblFile.SVG_SPEED_MAX; //+1 = programmed feed
+			TBSvgSpeed.SmallChange = 1;
+			TBSvgSpeed.LargeChange = 30;
+			TBSvgSpeed.Value = GrblFile.SVG_SPEED_MAX;
+			TBSvgSpeed.Margin = new Padding(3, 0, 3, 0);
+			TBSvgSpeed.ValueChanged += TBSvgSpeed_ValueChanged;
+			TBSvgSpeed.MouseUp += TBSvgSpeed_ApplyRequest;
+			TBSvgSpeed.KeyUp += TBSvgSpeed_ApplyRequest;
+
+			LblSvgSpeedValue = new Label();
+			LblSvgSpeedValue.AutoSize = true;
+			LblSvgSpeedValue.Anchor = AnchorStyles.Left;
+			LblSvgSpeedValue.Margin = new Padding(3, 6, 3, 0);
+
+			tableLayoutPanel5.SuspendLayout();
+			tableLayoutPanel5.RowCount = 5;
+			tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+			tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+			tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+			tableLayoutPanel5.Controls.Add(LblSvgPower, 0, 2);
+			tableLayoutPanel5.Controls.Add(TBSvgPower, 1, 2);
+			tableLayoutPanel5.Controls.Add(LblSvgPowerValue, 2, 2);
+			tableLayoutPanel5.SetColumnSpan(LblSvgPowerValue, 3);
+			tableLayoutPanel5.Controls.Add(LblSvgScale, 0, 3);
+			tableLayoutPanel5.Controls.Add(UDSvgScale, 1, 3);
+			tableLayoutPanel5.Controls.Add(LblSvgScaleValue, 2, 3);
+			tableLayoutPanel5.SetColumnSpan(LblSvgScaleValue, 3);
+			tableLayoutPanel5.Controls.Add(LblSvgSpeed, 0, 4);
+			tableLayoutPanel5.Controls.Add(TBSvgSpeed, 1, 4);
+			tableLayoutPanel5.Controls.Add(LblSvgSpeedValue, 2, 4);
+			tableLayoutPanel5.SetColumnSpan(LblSvgSpeedValue, 3);
+			tableLayoutPanel5.ResumeLayout();
+
+			SetSvgPowerRowVisible(false);
+		}
+
+		private void SetSvgPowerRowVisible(bool visible)
+		{
+			LblSvgPower.Visible = TBSvgPower.Visible = LblSvgPowerValue.Visible = visible;
+			LblSvgSpeed.Visible = TBSvgSpeed.Visible = LblSvgSpeedValue.Visible = visible;
+			LblSvgScale.Visible = UDSvgScale.Visible = LblSvgScaleValue.Visible = visible;
+		}
+
+		//called on file load: show the slider only for svg jobs and align it to the power of the loaded job
+		private void UpdateSvgPowerRow()
+		{
+			bool visible = Core != null && Core.LoadedFile != null && Core.LoadedFile.CanChangeSvgLaserPower;
+
+			if (visible && Core.LoadedFile.SvgTransformPending)
+			{
+				SetSvgPowerRowVisible(true); //a newer value is still being applied: do not pull controls back
+				return;
+			}
+
+			if (visible)
+			{
+				int max = GrblCore.Configuration != null && GrblCore.Configuration.MaxPWM >= 1 ? (int)GrblCore.Configuration.MaxPWM : 1000;
+				int value = Math.Max(0, Math.Min(max, Core.LoadedFile.SvgLaserPower));
+
+				mSuspendSvgPowerEvent = true;
+				TBSvgPower.Maximum = Math.Max(max, value);
+				TBSvgPower.Value = value;
+				TBSvgSpeed.Value = Math.Max(GrblFile.SVG_SPEED_MIN, Math.Min(GrblFile.SVG_SPEED_MAX, Core.LoadedFile.SvgSpeedValue));
+				UDSvgScale.Value = Core.LoadedFile.SvgScalePercent;
+				mSuspendSvgPowerEvent = false;
+
+				RefreshSvgPowerLabel();
+				RefreshSvgSpeedLabel();
+				RefreshSvgScaleLabel();
+			}
+
+			SetSvgPowerRowVisible(visible);
+		}
+
+		private void RefreshSvgPowerLabel()
+		{
+			decimal maxpwm = GrblCore.Configuration != null ? GrblCore.Configuration.MaxPWM : -1;
+
+			if (maxpwm > 0)
+				LblSvgPowerValue.Text = string.Format("S{0} ({1})", TBSvgPower.Value, (TBSvgPower.Value / maxpwm).ToString("P1"));
+			else
+				LblSvgPowerValue.Text = string.Format("S{0}", TBSvgPower.Value);
+		}
+
+		private void RefreshSvgSpeedLabel()
+		{
+			decimal factor = GrblFile.SvgSpeedFactor(TBSvgSpeed.Value);
+			LblSvgSpeedValue.Text = string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0:P1} [{1:0.000}x]", factor, factor);
+		}
+
+		private void TBSvgSpeed_ValueChanged(object sender, EventArgs e)
+		{
+			if (mSuspendSvgPowerEvent)
+				return;
+
+			RefreshSvgSpeedLabel();
+			TBSvgSpeed_ApplyRequest(sender, e); //requests are coalesced by GrblFile: safe to call on every step
+		}
+
+		private void TBSvgSpeed_ApplyRequest(object sender, EventArgs e)
+		{
+			if (mSuspendSvgPowerEvent || !TBSvgSpeed.Enabled || Core.LoadedFile == null)
+				return;
+
+			Core.LoadedFile.SetSvgSpeedValue(TBSvgSpeed.Value);
+		}
+
+		private void RefreshSvgScaleLabel()
+		{
+			decimal perc = UDSvgScale.Value;
+			LblSvgScaleValue.Text = string.Format(System.Globalization.CultureInfo.CurrentCulture, "% [{0:0.00}x]", (100 + perc) / 100m);
+		}
+
+		//size change rewrites all the coordinates of the job, but requests are coalesced by GrblFile,
+		//so the drawing follows the editor without dropping any step
+		private void UDSvgScale_ValueChanged(object sender, EventArgs e)
+		{
+			if (mSuspendSvgPowerEvent)
+				return;
+
+			RefreshSvgScaleLabel();
+
+			if (!UDSvgScale.Enabled || Core.LoadedFile == null)
+				return;
+
+			Core.LoadedFile.SetSvgScalePercent((int)UDSvgScale.Value);
+		}
+
+		private void TBSvgPower_ValueChanged(object sender, EventArgs e)
+		{
+			if (mSuspendSvgPowerEvent)
+				return;
+
+			RefreshSvgPowerLabel();
+			TBSvgPower_ApplyRequest(sender, e); //requests are coalesced by GrblFile: safe to call on every step
+		}
+
+		private void TBSvgPower_ApplyRequest(object sender, EventArgs e)
+		{
+			if (mSuspendSvgPowerEvent || !TBSvgPower.Enabled || Core.LoadedFile == null)
+				return;
+
+			Core.LoadedFile.SetSvgLaserPower(TBSvgPower.Value);
 		}
 
 		void OnLoopCountChanged(decimal current)
@@ -85,6 +304,7 @@ namespace LaserGRBL
 			{
 				mLoadedFileName = filename;
 				TbFileName.Text = System.IO.Path.GetFileName(filename);
+				UpdateSvgPowerRow();
 			}
 		}
 
@@ -252,6 +472,8 @@ namespace LaserGRBL
             BtnRunProgram.Visible = !Core.CanAbortProgram;
             BtnAbortProgram.Visible = Core.CanAbortProgram;
             BtnOpen.Enabled = Core.CanLoadNewFile;
+			if (TBSvgPower != null) //power, speed and size are fixed for the whole job: cannot be changed while running
+				TBSvgPower.Enabled = TBSvgSpeed.Enabled = UDSvgScale.Enabled = !Core.InProgram;
 
 			bool old = TxtManualCommand.Enabled;
 			TxtManualCommand.Enabled = Core.CanSendManualCommand;
@@ -355,6 +577,18 @@ namespace LaserGRBL
             PB.Bars.Clear();
 			PB.Bars.Add(new LaserGRBL.UserControls.DoubleProgressBar.Bar(ColorScheme.PreviewCommandWait));
 			PB.Bars.Add(new LaserGRBL.UserControls.DoubleProgressBar.Bar(ColorScheme.PreviewCommandOK));
+			if (LblSvgPower != null)
+			{
+				LblSvgPower.ForeColor = ColorScheme.FormForeColor;
+				LblSvgPowerValue.ForeColor = ColorScheme.FormForeColor;
+				TBSvgPower.BackColor = ColorScheme.FormBackColor;
+				LblSvgSpeed.ForeColor = ColorScheme.FormForeColor;
+				LblSvgSpeedValue.ForeColor = ColorScheme.FormForeColor;
+				TBSvgSpeed.BackColor = ColorScheme.FormBackColor;
+				LblSvgScale.ForeColor = ColorScheme.FormForeColor;
+				LblSvgScaleValue.ForeColor = ColorScheme.FormForeColor;
+			}
+
             CmdLog.OnColorChange();
             CmdLog.Invalidate();
 		}
