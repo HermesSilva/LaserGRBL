@@ -304,3 +304,6 @@ $RECYCLE.BIN/
 setup.exe
 install.exe
 updte.bat
+
+# Portable deploy packages produced by deploy.ps1
+/Deploy/
